@@ -71,9 +71,13 @@ class Importer(object):
     def _deserialize_fields(self, fields):
         result = {}
         for name, info in fields.items():
+            #import pdb; pdb.set_trace()
             field_type = info['type']
             field_value = info['value']
-            result[name] = self.deserializers.get(field_type)(field_value)
+            if field_type in self.deserializers:
+                result[name] = self.deserializers.get(field_type)(field_value)
+            else:
+                self.logger.warning(f"Missing serailizer for {field_type}")
         return result
 
     def _create(self, container, data):
@@ -87,9 +91,9 @@ class Importer(object):
                 id = data['id'],
                 **attributes
             )
-            logger.info(f"Created {id} in {'/'.join(container.getPhysicalPath())}")
+            self.logger.info(f"Created {id} in {'/'.join(container.getPhysicalPath())}")
         else:
-            logger.warning(f"Already exists {id} in {'/'.join(container.getPhysicalPath())}")
+            self.logger.warning(f"Already exists {id} in {'/'.join(container.getPhysicalPath())}")
 
     def walk_source(self):
         """ Returns the existing container object with the data to be used"""
