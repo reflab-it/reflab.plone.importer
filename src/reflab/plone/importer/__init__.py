@@ -40,9 +40,9 @@ class Importer(object):
 
         # Destination
         self.destination_container = self._traverse(self.portal, confs['destination']['container'])
-
         # Running options
         self.run_create = bool(confs['main']['create'])
+        self.delete_existing = bool(confs['main']['delete_existing'])
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -71,7 +71,6 @@ class Importer(object):
     def _deserialize_fields(self, fields):
         result = {}
         for name, info in fields.items():
-            #import pdb; pdb.set_trace()
             field_type = info['type']
             field_value = info['value']
             if field_type in self.deserializers:
@@ -85,6 +84,8 @@ class Importer(object):
         id = data['id']
         if not id in container.objectIds():
             attributes = self._deserialize_fields(data['fields'])
+            # need a better solution
+            if 'id' in attributes.keys(): del(attributes['id'])
             api.content.create(
                 container = container,
                 type = data['portal_type'],
@@ -110,6 +111,11 @@ class Importer(object):
             yield container, data
 
     def run(self):
+        # getting items inside
+        if self.delete_existing:
+            contents = [x.getObject() for x in api.content.find(context=self.destination_container, depth=1)]
+            self.logger.info(f"Deleting all items in desitnation folder")
+            api.content.delete(objects=contents, check_linkintegrity=False)
 
         if self.run_create:
             self.logger.info('Starting creation')
