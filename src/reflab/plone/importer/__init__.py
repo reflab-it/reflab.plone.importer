@@ -86,6 +86,7 @@ class Importer(object):
             attributes = self._deserialize_fields(data['fields'])
             # need a better solution
             if 'id' in attributes.keys(): del(attributes['id'])
+            print("portal type is => " + data['portal_type'])
             api.content.create(
                 container = container,
                 type = data['portal_type'],
