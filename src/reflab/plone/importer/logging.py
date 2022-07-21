@@ -1,14 +1,11 @@
 import logging
 
-def init_logger(path):
+def init_logger(path, level='DEBUG'):
     logger = logging.getLogger('reflab.plone.importer')
-    logger.setLevel(logging.DEBUG)
+    level = getattr(logging, level, 'DEBUG')
+    logger.setLevel(level)
 
     format = logging.Formatter("%(asctime)s - %(message)s")
-
-    # stream_handler = logging.StreamHandler()
-    # stream_handler.setFormatter(format)
-    # logger.addHandler(stream_handler)
 
     file_handler = logging.FileHandler(path)
     file_handler.setFormatter(format)

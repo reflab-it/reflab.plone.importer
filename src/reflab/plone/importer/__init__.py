@@ -8,14 +8,16 @@ import json
 import transaction
 from plone import api
 
-
 class Importer(object):
 
     def __init__(self, app, config_file_path):
         confs = config.load_from_file(config_file_path)
-
+        
         # Logging
-        self.logger = logging.init_logger(confs['logging']['file'])
+        self.logger = logging.init_logger(
+            confs['logging'].get('file', '/tmp/import.log'),
+            level=confs['logging'].get('level', 'DEBUG'),
+        )
         self.logger.info(f"Initializing importer from {config_file_path}")
 
         # App and portal
@@ -32,6 +34,9 @@ class Importer(object):
         # Fields deserializer
         self.deserializers = confs['deserializers']
 
+        # Data converters
+        self.converters = confs['converters']
+
         # Data source
         _source = confs['source']['directory']
         if not os.path.exists(_source):
@@ -40,15 +45,20 @@ class Importer(object):
 
         # Destination
         self.destination_container = self._traverse(self.portal, confs['destination']['container'])
+
         # Running options
         self.run_create = bool(confs['main']['create'])
         self.delete_existing = bool(confs['main']['delete_existing'])
+        self.create_limit = int(confs['main'].get('create_limit', 0))
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
         if path.startswith('/'):
             path = path[1:]
         return container.unrestrictedTraverse(path, None)
+
+    def _as_section_key_name(self, string):
+        return string.lower().strip()
 
     def _read_data(self, path):
         """ read data.json from file system"""
@@ -65,8 +75,12 @@ class Importer(object):
         if data:
             data['id'] = os.path.split(path)[-1]     
 
+        # Process data with a converter if defined
+        converter_name = self._as_section_key_name(data['portal_type'])
+        if converter_name in self.converters:
+            data = self.converters[converter_name](data)
+        
         return data
-
 
     def _deserialize_fields(self, fields):
         result = {}
@@ -82,20 +96,30 @@ class Importer(object):
     def _create(self, container, data):
         """ add a content inside a container object and populate using data """
         id = data['id']
-        if not id in container.objectIds():
-            attributes = self._deserialize_fields(data['fields'])
-            # need a better solution
-            if 'id' in attributes.keys(): del(attributes['id'])
-            print("portal type is => " + data['portal_type'])
-            api.content.create(
-                container = container,
-                type = data['portal_type'],
-                id = data['id'],
-                **attributes
-            )
-            self.logger.info(f"Created {id} in {'/'.join(container.getPhysicalPath())}")
-        else:
+        if id in container.objectIds():
             self.logger.warning(f"Already exists {id} in {'/'.join(container.getPhysicalPath())}")
+            return
+
+        attributes = self._deserialize_fields(data['fields'])
+        
+        for invalid_name in ['id', 'type', 'container']:
+            if invalid_name in attributes.keys():
+                self.logger.warning(f"A field with name '{invalid_name}' can't be used during the creation of a '{data['portal_type']}' and it will be ignored.")
+                del(attributes[invalid_name])
+
+        obj = api.content.create(
+            container = container,
+            type = data['portal_type'],
+            id = data['id'],
+            **attributes
+        )
+
+        if 'modification_date' in attributes.keys():
+            obj.modification_date = attributes['modification_date']
+            obj.reindexObject(idxs=['modified'])
+
+        self.logger.info(f"Created {id} in {'/'.join(container.getPhysicalPath())}")
+            
 
     def walk_source(self):
         """ Returns the existing container object with the data to be used"""
@@ -112,18 +136,29 @@ class Importer(object):
             yield container, data
 
     def run(self):
-        # getting items inside
         if self.delete_existing:
             contents = [x.getObject() for x in api.content.find(context=self.destination_container, depth=1)]
-            self.logger.info(f"Deleting all items in desitnation folder")
+            self.logger.info(f"Deleting all items in destination folder")
             api.content.delete(objects=contents, check_linkintegrity=False)
 
         if self.run_create:
+            create_counter = 0
             self.logger.info('Starting creation')
             for container, data in self.walk_source():
-                self.logger.info(f"Create with {container} and {data}")
-                if container and data:
-                    self._create(container, data)
+                if self.create_limit and create_counter < self.create_limit:
+                    self.logger.info(f"Create with {container} and {data}")
+                    if container and data:
+                        self._create(container, data)
+                        create_counter += 1
 
-            transaction.commit()        
-            self.logger.info('Completed creation')
+        for task_name, task in self.subtasks.items():
+            self.logger.info(f'Starting subtask: {task_name}')
+            for container, data in self.walk_source():
+                if container and data:
+                    task(self, container, data)
+
+        transaction.commit()        
+        self.logger.info('Completed import')
+
+            
+            

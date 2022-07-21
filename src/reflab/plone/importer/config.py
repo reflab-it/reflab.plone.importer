@@ -20,4 +20,7 @@ def load_from_file(path):
     for name, module in config['deserializers'].items():
         config['deserializers'][name] = import_module(module).deserialize
 
+    for name, module in config['converters'].items():
+        config['converters'][name] = import_module(module).convert
+
     return config
