@@ -28,8 +28,10 @@ class Importer(object):
             raise ValueError(f"Unable to find a portal at {portal_path}")
         self.portal = env.init_portal(_portal)
 
+        self.running_task = None
+
         # Tasks
-        self.subtasks = confs['subtasks']
+        self.tasks = confs['tasks']
 
         # Fields deserializer
         self.deserializers = confs['deserializers']
@@ -47,9 +49,7 @@ class Importer(object):
         self.destination_container = self._traverse(self.portal, confs['destination']['container'])
 
         # Running options
-        self.run_create = bool(confs['main']['create'])
         self.delete_existing = bool(confs['main']['delete_existing'])
-        self.create_limit = int(confs['main'].get('create_limit', 0))
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -80,9 +80,10 @@ class Importer(object):
         if converter_name in self.converters:
             data = self.converters[converter_name](data)
         
+        # TODO evaluate if deserialize_fields should be called here or in the tasks
         return data
 
-    def _deserialize_fields(self, fields):
+    def deserialize_fields(self, fields):
         result = {}
         for name, info in fields.items():
             field_type = info['type']
@@ -92,34 +93,6 @@ class Importer(object):
             else:
                 self.logger.warning(f"Missing serailizer for {field_type}")
         return result
-
-    def _create(self, container, data):
-        """ add a content inside a container object and populate using data """
-        id = data['id']
-        if id in container.objectIds():
-            self.logger.warning(f"Already exists {id} in {'/'.join(container.getPhysicalPath())}")
-            return
-
-        attributes = self._deserialize_fields(data['fields'])
-        
-        for invalid_name in ['id', 'type', 'container']:
-            if invalid_name in attributes.keys():
-                self.logger.warning(f"A field with name '{invalid_name}' can't be used during the creation of a '{data['portal_type']}' and it will be ignored.")
-                del(attributes[invalid_name])
-
-        obj = api.content.create(
-            container = container,
-            type = data['portal_type'],
-            id = data['id'],
-            **attributes
-        )
-
-        if 'modification_date' in attributes.keys():
-            obj.modification_date = attributes['modification_date']
-            obj.reindexObject(idxs=['modified'])
-
-        self.logger.info(f"Created {id} in {'/'.join(container.getPhysicalPath())}")
-            
 
     def walk_source(self):
         """ Returns the existing container object with the data to be used"""
@@ -141,21 +114,13 @@ class Importer(object):
             self.logger.info(f"Deleting all items in destination folder")
             api.content.delete(objects=contents, check_linkintegrity=False)
 
-        if self.run_create:
-            create_counter = 0
-            self.logger.info('Starting creation')
-            for container, data in self.walk_source():
-                if self.create_limit and create_counter < self.create_limit:
-                    self.logger.info(f"Create with {container} and {data}")
-                    if container and data:
-                        self._create(container, data)
-                        create_counter += 1
-
-        for task_name, task in self.subtasks.items():
+        for task_name, task in self.tasks.items():
+            self.running_task = task_name
             self.logger.info(f'Starting subtask: {task_name}')
             for container, data in self.walk_source():
                 if container and data:
                     task(self, container, data)
+        self.running_task = None
 
         transaction.commit()        
         self.logger.info('Completed import')
