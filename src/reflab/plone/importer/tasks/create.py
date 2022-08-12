@@ -1,12 +1,11 @@
 from  plone import api
 
 CREATE_GLOBALS = dict(
-    limit = 0, # edit here for debug purposes
+    limit = 20, # edit here for debug purposes
     counter = 0
 )
 
 def task(importer, container, data):
-    
     if CREATE_GLOBALS['limit'] > 0:
         if CREATE_GLOBALS['counter'] > CREATE_GLOBALS['limit']:
             return 
@@ -18,7 +17,8 @@ def task(importer, container, data):
         )
         return
 
-    attributes = importer.deserialize_fields(data['fields'])
+    # attributes = importer.deserialize_fields(data['fields'])
+    attributes = data['fields']
     
     for invalid_name in ['id', 'type', 'container']:
         if invalid_name in attributes.keys():

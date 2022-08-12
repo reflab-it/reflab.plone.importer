@@ -76,22 +76,26 @@ class Importer(object):
             data['id'] = os.path.split(path)[-1]     
 
         # Process data with a converter if defined
-        converter_name = self._as_section_key_name(data['portal_type'])
+        try:
+            converter_name = self._as_section_key_name(data['portal_type'])
+        except:
+            import pdb; pdb.set_trace()
+            
         if converter_name in self.converters:
             data = self.converters[converter_name](data)
         
         # TODO evaluate if deserialize_fields should be called here or in the tasks
         return data
 
-    def deserialize_fields(self, fields):
+    def deserialize_fields(self, fields, fs_path = None):
         result = {}
         for name, info in fields.items():
             field_type = info['type']
             field_value = info['value']
             if field_type in self.deserializers:
-                result[name] = self.deserializers.get(field_type)(field_value)
+                result[name] = self.deserializers.get(field_type)(field_value, fs_path=fs_path, importer=self)
             else:
-                self.logger.warning(f"Missing serailizer for {field_type}")
+                self.logger.warning(f"Missing serializer for {field_type}")
         return result
 
     def walk_source(self):
@@ -103,9 +107,14 @@ class Importer(object):
             if path == '.':
                 continue
 
+            # skip directories for files
+            if os.path.split(path)[-1].startswith('_'):
+                continue
+
             parent_path = os.path.dirname(path)
             container = self._traverse(self.destination_container, parent_path)
             data = self._read_data(root)
+            data['fields'] = self.deserialize_fields(data['fields'], fs_path = root)
             yield container, data
 
     def run(self):

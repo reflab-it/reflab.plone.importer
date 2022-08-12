@@ -1,6 +1,5 @@
-def deserialize(value):
-    try:
-        tmp = int(value)
-    except:
-        tmp = 0
-    return tmp
+def deserialize(value, **args):
+    if value == 'None':
+        return 0
+    return int(value)
+        

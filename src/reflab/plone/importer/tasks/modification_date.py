@@ -12,7 +12,7 @@ def task(importer, container, data):
         return
 
     obj = container[obj_id]
-    setattr(obj, 'modification_date', modification_date['value'])
+    setattr(obj, 'modification_date', modification_date)
     obj.reindexObject(idxs=['modification_date'])
     importer.logger.info(f"Updated modification date of { '/'.join(obj.getPhysicalPath()) }")
     

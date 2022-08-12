@@ -1,6 +1,6 @@
 import datetime
 
-def deserialize(value):
+def deserialize(value, **args):
     if value is None or value == 'None':
         return None
     else:

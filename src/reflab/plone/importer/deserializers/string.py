@@ -1,2 +1,2 @@
-def deserialize(value):
+def deserialize(value, **args):
     return str(value)

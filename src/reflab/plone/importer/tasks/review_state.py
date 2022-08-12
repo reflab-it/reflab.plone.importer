@@ -10,5 +10,9 @@ def task(importer, container, data):
         return
 
     obj = container[obj_id]
-    api.content.transition(obj=obj, to_state=review_state)    
+    try:
+        api.content.transition(obj=obj, to_state=review_state)    
+    except:
+        import pdb; pdb.set_trace()
+        
     importer.logger.info(f"Updated review state of { '/'.join(obj.getPhysicalPath()) }")
