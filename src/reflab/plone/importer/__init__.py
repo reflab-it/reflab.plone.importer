@@ -8,6 +8,7 @@ import json
 import transaction
 from plone import api
 
+
 class Importer(object):
 
     def __init__(self, app, config_file_path):
@@ -45,11 +46,15 @@ class Importer(object):
             raise ValueError(f'Missing data source dir at {_source}')
         self.source = _source
 
+        # Data to work on
+        self.data = []
+
         # Destination
         self.destination_container = self._traverse(self.portal, confs['destination']['container'])
 
         # Running options
         self.delete_existing = bool(confs['main']['delete_existing'])
+        self.limit = int(confs['main']['limit'])
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -76,10 +81,7 @@ class Importer(object):
             data['id'] = os.path.split(path)[-1]     
 
         # Process data with a converter if defined
-        try:
-            converter_name = self._as_section_key_name(data['portal_type'])
-        except:
-            import pdb; pdb.set_trace()
+        converter_name = self._as_section_key_name(data['portal_type'])
             
         if converter_name in self.converters:
             data = self.converters[converter_name](data)
@@ -98,39 +100,67 @@ class Importer(object):
                 self.logger.warning(f"Missing serializer for {field_type}")
         return result
 
-    def walk_source(self):
+    def walk_data(self):
         """ Returns the existing container object with the data to be used"""
         container = None
         data = None
-        for root, dirs, files in os.walk(self.source):
-            path = os.path.relpath(root, self.source)
-            if path == '.':
-                continue
-
-            # skip directories for files
-            if os.path.split(path)[-1].startswith('_'):
-                continue
-
-            parent_path = os.path.dirname(path)
+        for absolute_path, data in self.data:
+            relative_path = os.path.relpath(absolute_path, self.source)
+            parent_path = os.path.dirname(relative_path)
             container = self._traverse(self.destination_container, parent_path)
-            data = self._read_data(root)
-            data['fields'] = self.deserialize_fields(data['fields'], fs_path = root)
             yield container, data
 
+    def walk_source(self):
+        """ Walk filesystem source according to limit """
+        for absolute_path, dirs, files in os.walk(self.source):
+            if self.limit and len(self.data) > self.limit:
+                self.logger.warning(
+                    f'Data ready according to limit: {self.limit}'
+                )
+                return
+
+            if not self.is_valid_path(absolute_path):
+                continue
+
+            yield absolute_path
+
+    def is_valid_path(self, path):
+        relative_path = os.path.relpath(path, self.source)
+        # Skip root path
+        if relative_path == '.':
+            return False
+
+        # skip directories for files
+        if os.path.split(relative_path)[-1].startswith('_'):
+            return False
+
+        return True
+
+
     def run(self):
+        # 1) Convert the filesystem structure as a list of tuple (path, data)
+        for absolute_path in self.walk_source():
+            data = self._read_data(absolute_path)
+            data['fields'] = self.deserialize_fields(data['fields'], fs_path = absolute_path)
+            self.data.append((absolute_path, data))
+        
+        # 2) Clean up data stored on the site
         if self.delete_existing:
             contents = [x.getObject() for x in api.content.find(context=self.destination_container, depth=1)]
             self.logger.info(f"Deleting all items in destination folder")
             api.content.delete(objects=contents, check_linkintegrity=False)
 
+        # 3) Run all the configured tasks
         for task_name, task in self.tasks.items():
             self.running_task = task_name
             self.logger.info(f'Starting subtask: {task_name}')
-            for container, data in self.walk_source():
+            for container, data in self.walk_data():
                 if container and data:
                     task(self, container, data)
+                        
         self.running_task = None
 
+        # 4) Commit the transaction and exit
         transaction.commit()        
         self.logger.info('Completed import')
 
