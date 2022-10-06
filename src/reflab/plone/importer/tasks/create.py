@@ -1,7 +1,7 @@
 from  plone import api
 
 CREATE_GLOBALS = dict(
-    limit = 20, # edit here for debug purposes
+    limit = 0, # edit here for debug purposes
     counter = 0
 )
 

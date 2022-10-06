@@ -93,7 +93,7 @@ class Importer(object):
     def deserialize_fields(self, fields, fs_path=None):
         result = {}
         for name, info in fields.items():
-            field_type = info["type"]
+            field_type = self._as_section_key_name(info["type"])
             field_value = info["value"]
             if field_type in self.deserializers:
                 result[name] = self.deserializers.get(field_type)(
