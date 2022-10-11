@@ -10,6 +10,8 @@ def task(importer, container, data):
         if CREATE_GLOBALS['counter'] > CREATE_GLOBALS['limit']:
             return 
 
+    available_types = api.portal.get_tool('portal_types').objectIds()
+
     id = data['id']
     if id in container.objectIds():
         importer.logger.warning(
@@ -28,6 +30,11 @@ def task(importer, container, data):
             )
             del(attributes[invalid_name])
 
+    portal_type = data['portal_type']
+    if portal_type not in available_types:
+        importer.logger.warning(f'The portal type {portal_type} is not availabe, it will be ignored')
+        return
+    
     api.content.create(
         container = container,
         type = data['portal_type'],

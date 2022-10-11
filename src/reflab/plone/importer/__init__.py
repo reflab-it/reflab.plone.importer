@@ -53,7 +53,7 @@ class Importer(object):
         )
 
         # Running options
-        self.delete_existing = bool(confs["main"]["delete_existing"])
+        self.delete_existing = confs["main"]["delete_existing"] == 'True' and True or False
         self.limit = int(confs["main"]["limit"])
 
     def _traverse(self, container, path):
@@ -81,7 +81,11 @@ class Importer(object):
             data["id"] = os.path.split(path)[-1]
 
         # Process data with a converter if defined
-        converter_name = self._as_section_key_name(data["portal_type"])
+        try:
+            converter_name = self._as_section_key_name(data["portal_type"])
+        except:
+            import pdb; pdb.set_trace()
+            
 
         if converter_name in self.converters:
             data = self.converters[converter_name](data)
