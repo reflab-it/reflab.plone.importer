@@ -1,6 +1,11 @@
 import os
 from plone.namedfile import NamedBlobFile
 
+# TODO: define a best practice for exporting the value, options could be:
+# - keep the value empty, use a convetion to search file in a directory with
+#   name '_{field_name}'
+# - put a relative path of the directory that contains the file(s)
+
 def deserialize(value, **kwargs):
     fs_path = kwargs.get('fs_path')
     file_dir_path = os.path.join(fs_path, value)
