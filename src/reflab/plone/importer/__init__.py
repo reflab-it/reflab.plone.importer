@@ -34,6 +34,7 @@ class Importer(object):
 
         # Fields deserializer
         self.deserializers = confs["deserializers"]
+        self._missing_deserializers = []
 
         # Data converters
         self.converters = confs["converters"]
@@ -55,6 +56,7 @@ class Importer(object):
         # Running options
         self.delete_existing = confs["main"]["delete_existing"] == 'True' and True or False
         self.limit = int(confs["main"]["limit"])
+        self.commit = confs["main"]["commit"] == 'True' and True or False
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -104,7 +106,8 @@ class Importer(object):
                     field_value, fs_path=fs_path, importer=self
                 )
             else:
-                self.logger.warning(f"Missing serializer for {field_type}")
+                if field_type not in self._missing_deserializers:
+                    self._missing_deserializers.append(field_type)
         return result
 
     def walk_data(self):
@@ -144,13 +147,21 @@ class Importer(object):
         return True
 
     def run(self):
-        # 1) Convert the filesystem structure as a list of tuple (path, data)
+        # 1) Convert the filesystem structure as a list of tuple (path, data) 
+        #    Deserialize objects according to configuration
         for absolute_path in self.walk_source():
             data = self._read_data(absolute_path)
+            # Todo: create a configuration of keys with objects to deserialize?
             data["fields"] = self.deserialize_fields(
                 data["fields"], fs_path=absolute_path
             )
+            data["properties"] = self.deserialize_fields(
+                data["properties"], fs_path=absolute_path
+            )            
             self.data.append((absolute_path, data))
+
+        for field_type in self._missing_deserializers:    
+            self.logger.warning(f"Missing serializer for {field_type}")
 
         # 2) Clean up data stored on the site
         if self.delete_existing:
@@ -172,6 +183,12 @@ class Importer(object):
 
         self.running_task = None
 
-        # 4) Commit the transaction and exit
-        transaction.commit()
+        # 4) Commit and exit
+        if self.commit:
+            self.logger.info("Start commit...")
+            transaction.commit()
+            self.logger.info("...completed commit")
+        else:
+            self.logger.warning("Commit disabled; database not changed")
+
         self.logger.info("Completed import")
