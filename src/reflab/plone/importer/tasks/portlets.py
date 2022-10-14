@@ -92,6 +92,8 @@ def task(importer, container, data):
         elif status.lower() == "show":
             assignable.setBlacklistStatus(category, False)
 
-
+    importer.logger.info(
+        f"Portles set on {obj.absolute_url()}"
+    )
 
     

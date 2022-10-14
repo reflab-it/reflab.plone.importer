@@ -39,3 +39,7 @@ def task(importer, container, data):
                     else:
                         setattr(obj, name, relations[0])
                     importer.logger.info(f'Referecens to "{value}" set on {obj.absolute_url()}')
+
+    importer.logger.info(
+        f"Referecens set on {obj.absolute_url()}"
+    )

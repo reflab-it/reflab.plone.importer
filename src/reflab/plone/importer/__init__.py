@@ -57,6 +57,7 @@ class Importer(object):
         self.delete_existing = confs["main"]["delete_existing"] == 'True' and True or False
         self.limit = int(confs["main"]["limit"])
         self.commit = confs["main"]["commit"] == 'True' and True or False
+        self.commit_frequency = int(confs["main"]["commit_frequency"])
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -174,12 +175,19 @@ class Importer(object):
             api.content.delete(objects=contents, check_linkintegrity=False)
 
         # 3) Run all the configured tasks
+        task_counter = 0
         for task_name, task in self.tasks.items():
             self.running_task = task_name
             self.logger.info(f"Starting subtask: {task_name}")
             for container, data in self.walk_data():
                 if container and data:
                     task(self, container, data)
+                    task_counter += 1
+                    if self.commit and self.commit_frequency and task_counter >= self.commit_frequency:
+                        self.logger.info(f'{task_counter} taks actions run; commit...')
+                        transaction.commit()
+                        task_counter = 0
+                        self.logger.info("...completed commit of current task actions")            
 
         self.running_task = None
 
