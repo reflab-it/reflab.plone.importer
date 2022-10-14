@@ -56,8 +56,10 @@ class Importer(object):
         # Running options
         self.delete_existing = confs["main"]["delete_existing"] == 'True' and True or False
         self.limit = int(confs["main"]["limit"])
+        self.ignored_types = confs["main"].get("ignored_types", [])
         self.commit = confs["main"]["commit"] == 'True' and True or False
         self.commit_frequency = int(confs["main"]["commit_frequency"])
+
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -76,25 +78,22 @@ class Importer(object):
                 data = json.load(infile)
         else:
             self.logger.warning("Missing data.json (%s)" % data_path)
-            data = None
+            return None
 
         # Add the id from the directory name
         # TODO: manage an extra validity check here?
-        if data:
-            data["id"] = os.path.split(path)[-1]
+        data["id"] = os.path.split(path)[-1]
 
         # Process data with a converter if defined
-        try:
-            converter_name = self._as_section_key_name(data["portal_type"])
-        except:
-            import pdb; pdb.set_trace()
-            
+        # TODO: allow other conditions, not only on portal_type?
+        converters_to_use = []
+        portal_type_converter = self._as_section_key_name(data["portal_type"])
+        if portal_type_converter in self.converters:
+            converters_to_use.append(portal_type_converter)
 
-        if converter_name in self.converters:
+        for converter_name in converters_to_use:
             data = self.converters[converter_name](data)
 
-        # TODO
-        # evaluate if deserialize_fields should be called here or in the tasks
         return data
 
     def deserialize_fields(self, fields, fs_path=None):
@@ -150,8 +149,18 @@ class Importer(object):
     def run(self):
         # 1) Convert the filesystem structure as a list of tuple (path, data) 
         #    Deserialize objects according to configuration
+        portal_types_in_source = []
         for absolute_path in self.walk_source():
             data = self._read_data(absolute_path)
+            if not data: 
+                continue
+
+            if data['portal_type'] in self.ignored_types:
+                continue
+
+            if data['portal_type'] not in portal_types_in_source:
+                portal_types_in_source.append(data['portal_type'])
+
             # Todo: create a configuration of keys with objects to deserialize?
             data["fields"] = self.deserialize_fields(
                 data["fields"], fs_path=absolute_path
@@ -161,8 +170,15 @@ class Importer(object):
             )            
             self.data.append((absolute_path, data))
 
+        # Print some useful informations before running the tasks
         for field_type in self._missing_deserializers:    
             self.logger.warning(f"Missing serializer for {field_type}")
+
+        available_types = api.portal.get_tool('portal_types').objectIds()
+        for pt in portal_types_in_source:
+            if pt not in available_types:
+                self.logger.warning(f"Portal type {pt} not registered in the portal, it will be ignored")
+        
 
         # 2) Clean up data stored on the site
         if self.delete_existing:

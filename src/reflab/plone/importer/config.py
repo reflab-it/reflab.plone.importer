@@ -8,11 +8,18 @@ def load_from_file(path):
     config_parser.read(path)
 
     # Convert as a dict
-    config = {s: dict(config_parser.items(s))
-              for s in config_parser.sections()}
+    config  = {}
+    for section in config_parser.sections():
+        section_items = config_parser.items(section)
+        config_items = {}
+        for k, v in section_items:
+            if '\n' in v:
+                v_as_list = [i for i in v.split('\n') if i]
+                config_items[k] = v_as_list
+            else:
+                config_items[k]=  v
 
-    # Convert specific options
-    # config['main']['create'] = bool(config['main']['create'])
+        config[section] = config_items
 
     for name, module in config['tasks'].items():
         config['tasks'][name] = import_module(module).task
