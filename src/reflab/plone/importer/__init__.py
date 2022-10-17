@@ -206,7 +206,7 @@ class Importer(object):
                     try:
                         task(self, container, data)
                     except Exception as e:
-                        self.logger.error(f'Failed {task_name} inside {container.absolute_url()} with error:\n {e}')
+                        self.logger.error(f'Failed "{task_name}" inside {container.absolute_url()} with error:\n {e}')
                     task_counter += 1
                     if self.commit and self.commit_frequency and task_counter >= self.commit_frequency:
                         self.logger.info(f'{task_counter} taks actions run; commit...')
