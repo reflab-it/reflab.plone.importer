@@ -149,6 +149,7 @@ class Importer(object):
     def run(self):
         # 1) Convert the filesystem structure as a list of tuple (path, data) 
         #    Deserialize objects according to configuration
+        self.logger.info(f"Preparing data and deserializing fields...")
         portal_types_in_source = []
         for absolute_path in self.walk_source():
             data = self._read_data(absolute_path)
@@ -170,6 +171,7 @@ class Importer(object):
             )            
             self.data.append((absolute_path, data))
 
+        self.logger.info(f"... done")
         # Print some useful informations before running the tasks
         for field_type in self._missing_deserializers:    
             self.logger.warning(f"Missing serializer for {field_type}")
@@ -179,9 +181,11 @@ class Importer(object):
             if pt not in available_types:
                 self.logger.warning(f"Portal type {pt} not registered in the portal, it will be ignored")
         
+        
 
         # 2) Clean up data stored on the site
         if self.delete_existing:
+            self.logger.info(f"Deleting all contents in destination container...")
             items_found = api.content.find(
                 context=self.destination_container,
                 depth=1
@@ -189,21 +193,27 @@ class Importer(object):
             contents = [x.getObject() for x in items_found]
             self.logger.info(f"Deleting all items in destination folder")
             api.content.delete(objects=contents, check_linkintegrity=False)
+            self.logger.info(f"...done.")
+
 
         # 3) Run all the configured tasks
         task_counter = 0
         for task_name, task in self.tasks.items():
             self.running_task = task_name
-            self.logger.info(f"Starting subtask: {task_name}")
+            self.logger.info(f"Starting subtask: {task_name}...")
             for container, data in self.walk_data():
                 if container and data:
-                    task(self, container, data)
+                    try:
+                        task(self, container, data)
+                    except Exception as e:
+                        self.logger.error(f'Failed {task_name} inside {container.absolute_url()} with error:\n {e}')
                     task_counter += 1
                     if self.commit and self.commit_frequency and task_counter >= self.commit_frequency:
                         self.logger.info(f'{task_counter} taks actions run; commit...')
                         transaction.commit()
                         task_counter = 0
                         self.logger.info("...completed commit of current task actions")            
+            self.logger.info(f"...done.")
 
         self.running_task = None
 

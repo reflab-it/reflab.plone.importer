@@ -19,7 +19,6 @@ def task(importer, container, data):
         )
         return
 
-    # attributes = importer.deserialize_fields(data['fields'])
     attributes = data['fields']
     
     for invalid_name in ['id', 'type', 'container']:
@@ -58,6 +57,8 @@ def task(importer, container, data):
                 obj._setProperty(property_name, property_value, 'string')        
             elif property_value_type == list:
                 obj._setProperty(property_name, property_value, 'list')
+            elif property_value_type == bool:
+                obj._setProperty(property_name, property_value, 'boolean')                
             else:
                 importer.logger.warning(f'Unsupported property type {property_value_type}')
 
