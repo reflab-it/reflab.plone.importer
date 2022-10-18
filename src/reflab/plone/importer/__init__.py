@@ -29,8 +29,10 @@ class Importer(object):
 
         self.running_task = None
 
-        # Tasks
+        # Tasks and scripts
+        self.pre_scripts = confs["pre_scripts"]
         self.tasks = confs["tasks"]
+        self.post_scripts = confs["post_scripts"]
 
         # Fields deserializer
         self.deserializers = confs["deserializers"]
@@ -147,6 +149,12 @@ class Importer(object):
         return True
 
     def run(self):
+        # Pre scripts
+        for script_name, script in self.pre_scripts.items():
+            self.logger.info(f"Run pre-script '{script_name}'...")    
+            script(self)
+            self.logger.info(f"... done {script_name}")
+
         # 1) Convert the filesystem structure as a list of tuple (path, data) 
         #    Deserialize objects according to configuration
         self.logger.info(f"Preparing data and deserializing fields...")
@@ -172,6 +180,8 @@ class Importer(object):
             self.data.append((absolute_path, data))
 
         self.logger.info(f"... done")
+        self.logger.info(f"Items to process for each task: {len(self.data)}")
+
         # Print some useful informations before running the tasks
         for field_type in self._missing_deserializers:    
             self.logger.warning(f"Missing serializer for {field_type}")
@@ -181,8 +191,6 @@ class Importer(object):
             if pt not in available_types:
                 self.logger.warning(f"Portal type {pt} not registered in the portal, it will be ignored")
         
-        
-
         # 2) Clean up data stored on the site
         if self.delete_existing:
             self.logger.info(f"Deleting all contents in destination container...")
@@ -195,9 +203,9 @@ class Importer(object):
             api.content.delete(objects=contents, check_linkintegrity=False)
             self.logger.info(f"...done.")
 
-
         # 3) Run all the configured tasks
-        task_counter = 0
+        task_commit_counter = 0
+        task_total_counter = 0
         for task_name, task in self.tasks.items():
             self.running_task = task_name
             self.logger.info(f"Starting subtask: {task_name}...")
@@ -207,15 +215,24 @@ class Importer(object):
                         task(self, container, data)
                     except Exception as e:
                         self.logger.error(f'Failed "{task_name}" inside {container.absolute_url()} with error:\n {e}')
-                    task_counter += 1
-                    if self.commit and self.commit_frequency and task_counter >= self.commit_frequency:
-                        self.logger.info(f'{task_counter} taks actions run; commit...')
+                    task_commit_counter += 1
+                    task_total_counter += 1
+                    if self.commit and self.commit_frequency and task_commit_counter >= self.commit_frequency:
+                        self.logger.info(f'{task_commit_counter} taks actions run from last commit; commit...')
                         transaction.commit()
-                        task_counter = 0
+                        task_commit_counter = 0
                         self.logger.info("...completed commit of current task actions")            
+                        self.logger.info(f"Task '{task_name}' progress: {task_total_counter} / {len(self.data)}")
             self.logger.info(f"...done.")
 
         self.running_task = None
+
+        # Post scripts
+        for script_name, script in self.post_scripts.items():
+            self.logger.info(f"Run post-script '{script_name}'...")    
+            script(self)
+            self.logger.info(f"... done {script_name}")
+
 
         # 4) Commit and exit
         if self.commit:
