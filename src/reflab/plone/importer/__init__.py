@@ -204,9 +204,9 @@ class Importer(object):
             self.logger.info(f"...done.")
 
         # 3) Run all the configured tasks
-        task_commit_counter = 0
-        task_total_counter = 0
         for task_name, task in self.tasks.items():
+            task_commit_counter = 0
+            task_total_counter = 0            
             self.running_task = task_name
             self.logger.info(f"Starting subtask: {task_name}...")
             for container, data in self.walk_data():
@@ -223,7 +223,9 @@ class Importer(object):
                         task_commit_counter = 0
                         self.logger.info("...completed commit of current task actions")            
                         self.logger.info(f"Task '{task_name}' progress: {task_total_counter} / {len(self.data)}")
-            self.logger.info(f"...done.")
+            if self.commit:
+                self.logger.info(f"Final commit of task '{task_name}'")
+            self.logger.info(f"...task '{task_name}' done.")
 
         self.running_task = None
 
