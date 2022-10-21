@@ -85,11 +85,13 @@ def task(importer, container, data):
         assignable = queryMultiAdapter((obj, manager), ILocalPortletAssignmentManager)
         if status.lower() == "block":
             assignable.setBlacklistStatus(category, True)
+            importer.logger.info(
+                f"Portles blacklist for '{manager_name}' of category {category} set as {status} on {obj.absolute_url()}"
+            )
         elif status.lower() == "show":
             assignable.setBlacklistStatus(category, False)
-
-    importer.logger.info(
-        f"Portles set on {obj.absolute_url()}"
-    )
+            importer.logger.info(
+                f"Portles blacklist for '{manager_name}' of category {category} set as {status} on {obj.absolute_url()}"
+            )
 
     
