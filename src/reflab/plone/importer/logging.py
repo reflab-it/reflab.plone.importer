@@ -5,7 +5,7 @@ def init_logger(path, level='DEBUG'):
     level = getattr(logging, level, 'DEBUG')
     logger.setLevel(level)
 
-    format = logging.Formatter("%(asctime)s - %(message)s")
+    format = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
 
     file_handler = logging.FileHandler(path)
     file_handler.setFormatter(format)
