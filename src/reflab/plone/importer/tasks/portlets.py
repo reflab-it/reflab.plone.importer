@@ -39,13 +39,12 @@ def task(importer, container, data):
                 continue
 
             assignment = portlet_factory()
-
+            
             name = portlet_data.get("name")
             if name in mapping:
-                importer.logger.warning(u"Portlet with name '{}' already exists in {} of {}".format(name, manager_name, obj.absolute_url()))
-                continue
+                importer.logger.warning(f"Portlet {name} alredy exists in {obj.absolute_url()} and will be replaced")
+                del mapping[name]
             mapping[name] = assignment
-                
 
             # aq-wrap it so that complex fields will work
             assignment = assignment.__of__(importer.portal)
@@ -69,10 +68,7 @@ def task(importer, container, data):
                     try:
                         value = deserializer(value)
                     except Exception as e:
-                        importer.logger.info(u"Could not import portlet data {} for field {} on {}: {}".format(
-                            value, field, obj.absolute_url(), str(e)
-                        ))
-                        continue
+                        importer.logger.warning(f"Failed to deserialize '{property_name}' of portlet {name} in {obj.absolute_url()}. Provided value is used")  
                 field.set(assignment, value)
 
             importer.logger.info(u"Added {} '{}' to {} of {}".format(
