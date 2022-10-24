@@ -30,6 +30,11 @@ def task(importer, container, data):
     if portal_type not in available_types:
         importer.logger.warning(f'The portal type {portal_type} is not availabe, it will be ignored')
         return
+
+    # TODO - This is a common issue; the categories are exported as "subjects"
+    # but the field setter is "subject". Should we mange it here? Probably not...
+    if 'subjects' in data['fields'].keys() and not 'subject' in data['fields'].keys():
+        data['fields']['subject'] = data['fields']['subjects']
     
     obj = api.content.create(
         container = container,

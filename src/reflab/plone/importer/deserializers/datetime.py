@@ -1,7 +1,8 @@
-import datetime
+from DateTime import DateTime
+from plone.event.utils import pydt
 
 def deserialize(value, **args):
-    if value is None or value == 'None':
+    if not value or value == 'None' :
         return None
     else:
-        return datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        return pydt(DateTime(value))

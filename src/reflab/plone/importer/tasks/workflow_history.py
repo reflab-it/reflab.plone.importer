@@ -29,4 +29,6 @@ def task(importer, container, data):
     for wf in wf_tool.getWorkflowsFor(obj):
         wf.updateRoleMappingsFor(obj)
 
+    obj.reindexObject(idxs=['review_state'])
+
     importer.logger.info(f"Updated workflow history and permissions of {obj.absolute_url()}")
