@@ -50,10 +50,9 @@ def task(importer, container, data):
             assignment = assignment.__of__(importer.portal)
 
             # set visibility setting
-            visible = portlet_data.get("visible")
-            if visible:
-                settings = IPortletAssignmentSettings(assignment)
-                settings["visible"] = visible
+            visible = portlet_data.get("visible", True)
+            settings = IPortletAssignmentSettings(assignment)
+            settings["visible"] = visible
 
             # 2. Apply portlet settings
             portlet_interface = getUtility(IPortletTypeInterface, name=portlet_type)
