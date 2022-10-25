@@ -17,9 +17,9 @@ setup(
         'setuptools',
         'plone.api>=1.8.4',
         'plone.app.dexterity',
-    ],    
+    ],
     entry_points="""
     [plone.recipe.zope2instance.ctl]
     import = reflab.plone.importer.commands:run_import
-    """    
+    """
 )

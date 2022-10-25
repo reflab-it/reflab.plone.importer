@@ -5,7 +5,7 @@ from . import Importer
 _DEFAULT_CFG_NAME = 'import.cfg'
 
 def run_import(self, arg):
-    """ The command expect only one optional argument to a configuration file; 
+    """ The command expect only one optional argument to a configuration file;
         if missing checks for a file named 'import.cfg' in the current dir
     """
     arguments = [a for a in arg.split() if a]
@@ -23,7 +23,7 @@ def run_import(self, arg):
 
     if not config_file_path:
         raise FileNotFoundError(f"Create a file with name '{_DEFAULT_CFG_NAME}' in this directory or specify a path as argument")
-    
+
 
     cmdline = (
         self.get_startup_cmd(
@@ -35,4 +35,4 @@ def run_import(self, arg):
             "importer.run(); "
         )
     )
-    os.system(cmdline)    
+    os.system(cmdline)

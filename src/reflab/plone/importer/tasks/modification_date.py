@@ -15,10 +15,9 @@ def task(importer, container, data):
     if not modification_date:
         importer.logger.warning(f"Missing 'modification_date' for {obj.absolute_url()}")
         return
-    modification_date = datify(modification_date)    
+    modification_date = datify(modification_date)
 
     if modification_date != obj.modification_date:
         obj.setModificationDate(modification_date)
         obj.reindexObject(idxs=['modified'])
         importer.logger.info(f"Updated modification date of {obj.absolute_url()}")
-    

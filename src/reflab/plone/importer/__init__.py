@@ -151,17 +151,17 @@ class Importer(object):
     def run(self):
         # Pre scripts
         for script_name, script in self.pre_scripts.items():
-            self.logger.info(f"Run pre-script '{script_name}'...")    
+            self.logger.info(f"Run pre-script '{script_name}'...")
             script(self)
             self.logger.info(f"... done {script_name}")
 
-        # 1) Convert the filesystem structure as a list of tuple (path, data) 
+        # 1) Convert the filesystem structure as a list of tuple (path, data)
         #    Deserialize objects according to configuration
         self.logger.info(f"Preparing data and deserializing fields...")
         portal_types_in_source = []
         for absolute_path in self.walk_source():
             data = self._read_data(absolute_path)
-            if not data: 
+            if not data:
                 continue
 
             if data['portal_type'] in self.ignored_types:
@@ -176,21 +176,21 @@ class Importer(object):
             )
             data["properties"] = self.deserialize_fields(
                 data["properties"], fs_path=absolute_path
-            )            
+            )
             self.data.append((absolute_path, data))
 
         self.logger.info(f"... done")
         self.logger.info(f"Items to process for each task: {len(self.data)}")
 
         # Print some useful informations before running the tasks
-        for field_type in self._missing_deserializers:    
+        for field_type in self._missing_deserializers:
             self.logger.warning(f"Missing serializer for {field_type}")
 
         available_types = api.portal.get_tool('portal_types').objectIds()
         for pt in portal_types_in_source:
             if pt not in available_types:
                 self.logger.warning(f"Portal type {pt} not registered in the portal, it will be ignored")
-        
+
         # 2) Clean up data stored on the site
         if self.delete_existing:
             self.logger.info(f"Deleting all contents in destination container...")
@@ -206,7 +206,7 @@ class Importer(object):
         # 3) Run all the configured tasks
         for task_name, task in self.tasks.items():
             task_commit_counter = 0
-            task_total_counter = 0            
+            task_total_counter = 0
             self.running_task = task_name
             self.logger.info(f"Starting subtask: {task_name}...")
             for container, data in self.walk_data():
@@ -221,7 +221,7 @@ class Importer(object):
                         self.logger.info(f'{task_commit_counter} taks actions run from last commit; commit...')
                         transaction.commit()
                         task_commit_counter = 0
-                        self.logger.info("...completed commit of current task actions")            
+                        self.logger.info("...completed commit of current task actions")
                         self.logger.info(f"Task '{task_name}' progress: {task_total_counter} / {len(self.data)}")
             if self.commit:
                 self.logger.info(f"Final commit of task '{task_name}'")
@@ -231,7 +231,7 @@ class Importer(object):
 
         # Post scripts
         for script_name, script in self.post_scripts.items():
-            self.logger.info(f"Run post-script '{script_name}'...")    
+            self.logger.info(f"Run post-script '{script_name}'...")
             script(self)
             self.logger.info(f"... done {script_name}")
 
