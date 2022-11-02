@@ -11,10 +11,16 @@ def task(importer, container, data):
     if not value:
         return    
 
+    if not value in obj.objectIds():
+        importer.logger.warning(f'Content with id {value} not available in {obj.absolute_url()}; default_page not set')
+    
     if obj.hasProperty('default_page'):
         obj._updateProperty('default_page', value)
     else:
         obj._setProperty('default_page', value, 'string')  
+
+    default_page = obj[value]
+    default_page.reindexObject(idxs=['is_default_page'])
 
     importer.logger.info(f'Default page "{value}" set on {obj.absolute_url()}')
 
