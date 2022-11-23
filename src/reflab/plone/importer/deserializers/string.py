@@ -1,2 +1,2 @@
 def deserialize(value, **args):
-    return str(value)
+    return str(value) if value else ''
