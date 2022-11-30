@@ -38,6 +38,9 @@ class Importer(object):
         # Fields deserializer
         self.deserializers = confs["deserializers"]
         self._missing_deserializers = []
+        self.deserialize_keys = confs["main"].get(
+            "deserialize_keys", ["fields", "properties"]
+        )
 
         # Data converters
         self.converters = confs["converters"]
@@ -171,13 +174,11 @@ class Importer(object):
             if data['portal_type'] not in portal_types_in_source:
                 portal_types_in_source.append(data['portal_type'])
 
-            # Todo: create a configuration of keys with objects to deserialize?
-            data["fields"] = self.deserialize_fields(
-                data["fields"], fs_path=absolute_path
-            )
-            data["properties"] = self.deserialize_fields(
-                data["properties"], fs_path=absolute_path
-            )
+            for deserialize_key in self.deserialize_keys:
+                data[deserialize_key] = self.deserialize_fields(
+                    data[deserialize_key], fs_path=absolute_path
+                )
+
             self.data.append((absolute_path, data))
 
         self.logger.info(f"... done")
