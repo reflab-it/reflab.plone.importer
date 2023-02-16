@@ -2,6 +2,7 @@
 import json
 import os
 import sys
+import pprint
 
 import transaction
 from plone import api
@@ -216,10 +217,10 @@ class Importer(object):
                     try:
                         task(self, container, data)
                     except Exception as e:
-                        self.logger.error(f'Failed "{task_name}" inside {container.absolute_url()} with error:\n {e}')
+                        self.logger.exception(f'Failed "{task_name}" inside {container.absolute_url()} with data:\n {pprint.pformat(data)}')
                     except KeyboardInterrupt:
                         sys.exit(-1)
-                    task_commit_counter += 1                        
+                    task_commit_counter += 1
                     task_total_counter += 1
                     if self.commit and self.commit_frequency and task_commit_counter >= self.commit_frequency:
                         self.logger.info(f'{task_commit_counter} taks actions run from last commit; commit...')
