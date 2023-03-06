@@ -10,7 +10,7 @@ A procedure and a collection of utils for importing contents in Plone
 ## Data structure
 Since Plone / Zope database is organized as a filesystem (directory and files), the idea is to map the same organization on the source in the OS filesystem.
 
-## Configuartions and running
+## Configurations and running
 All the configurations should be managed in a cfg file; the default location of this file is in the same directory where the importer is executed.
 
 To execute the importer a new instance command is available; so from a typical buildout structure this can be done by executing
