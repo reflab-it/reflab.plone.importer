@@ -2,7 +2,7 @@ import os
 from plone.namedfile import NamedBlobFile
 
 # TODO: define a best practice for exporting the value, options could be:
-# - keep the value empty, use a convetion to search file in a directory with
+# - keep the value empty, use a convention to search file in a directory with
 #   name '_{field_name}'
 # - put a relative path of the directory that contains the file(s)
 
