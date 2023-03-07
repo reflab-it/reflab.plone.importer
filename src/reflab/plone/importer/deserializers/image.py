@@ -6,7 +6,7 @@ def deserialize(value, **kwargs):
     file_dir_path = os.path.join(fs_path, value)
     dir_contents = os.listdir(file_dir_path)
     if len(dir_contents) != 1:
-        raise ValueError('Expected only one file in directory')
+        raise ValueError(f'Expected only one file in directory: {file_dir_path}')
     file_name = dir_contents[0]
     file_path = os.path.join(file_dir_path, file_name)
 
