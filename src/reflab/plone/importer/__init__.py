@@ -67,6 +67,8 @@ class Importer(object):
         self.commit = confs["main"]["commit"] == 'True' and True or False
         self.commit_frequency = int(confs["main"]["commit_frequency"])
 
+        self.logger.info(f"Ignored Types: {self.ignored_types}")
+
 
     def _traverse(self, container, path):
         # Traversing from portal with a relative path
@@ -170,6 +172,7 @@ class Importer(object):
                 continue
 
             if data['portal_type'] in self.ignored_types:
+                self.logger.info(f"Skipped because ignored type: {data['portal_type']} / {data['id']}")
                 continue
 
             if data['portal_type'] not in portal_types_in_source:
