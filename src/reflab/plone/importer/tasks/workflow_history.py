@@ -21,7 +21,7 @@ def task(importer, container, data):
         for status in wf_data:
             status_time = status['time']
             if status_time:
-                status['time'] = pydt(DateTime(status_time[:-11]))
+                status['time'] = DateTime(status_time[:-11])
 
     obj.workflow_history = PersistentMapping(workflow_history)
 
