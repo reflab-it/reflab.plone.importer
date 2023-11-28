@@ -172,7 +172,7 @@ class Importer(object):
                 continue
 
             if data['portal_type'] in self.ignored_types:
-                self.logger.info(f"Skipped because ignored type: {data['portal_type']} / {data['id']}")
+                self.logger.debug(f"Skipped because ignored type: {data['portal_type']} / {data['id']}")
                 continue
 
             if data['portal_type'] not in portal_types_in_source:

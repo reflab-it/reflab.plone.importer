@@ -30,7 +30,7 @@ def task(importer, container, data):
     portal_type = data["portal_type"]
     available_types = api.portal.get_tool("portal_types").objectIds()
     if portal_type not in available_types:
-        importer.logger.warning(
+        importer.logger.debug(
             f"The portal type {portal_type} is not availabe, it will be ignored"  # NOQA
         )
         return
