@@ -13,10 +13,12 @@ def task(importer, container, data):
     for position, id in enumerate(ordered_ids):
         try:
             if obj.moveObjectToPosition(id, position, suppress_events=True):
-                # avendo soppresso gli eventi anche il reindex non viene fatto
                 obj[id].reindexObject(idxs=['getObjPositionInParent'])
-        except ValueError as err: 
+        except ValueError as err:
             errors.append(id)
+        except Exception as err:
+            importer.logger.error(f'Unexpected error while moving "{id}" of {obj.absolute_url()}')
+
     if errors:
         importer.logger.warning(f'Failed to move "{errors}" of {obj.absolute_url()}')
     else:
