@@ -1,6 +1,7 @@
 # This task expect that the references to set were temporary stored as a list
 # of uid (usually during the standard craete task)
 
+import ast
 from plone import api
 from plone.dexterity.utils import iterSchemata
 from z3c.relationfield.relation import RelationValue
@@ -11,19 +12,31 @@ from zope.schema import getFieldsInOrder
 
 
 def task(importer, container, data):
+
     obj_id = data['id']
     obj = obj_id in container.objectIds() and container[obj_id] or None
     if not obj:
-        return    
+        return
 
     intids = getUtility(IIntIds)
 
     for schemata in iterSchemata(obj):
-        for name, field in getFieldsInOrder(schemata):   
-             
+        for name, field in getFieldsInOrder(schemata):
+
             if type(field) in [Relation, RelationChoice, RelationList]:
                 value = field.get(schemata(obj))
                 if not value:
+                    continue
+
+                # A bit more permissive during deserialization here...
+                if type(value) == str:
+                    try:
+                        value = ast.literal_eval(value)
+                    except:
+                        value = None
+
+                if type(value) != list:
+                    importer.logger.error(f"UIDs for references in wrong format for {field.__name__} on {obj.absolute_url()} ")
                     continue
 
                 relations = []
@@ -31,7 +44,7 @@ def task(importer, container, data):
                     target = api.content.get(UID=uid)
                     if target:
                         uuid = intids.getId(target)
-                        relations.append(RelationValue(uuid))  
+                        relations.append(RelationValue(uuid))
 
                 if relations:
                     if type(field) == RelationList:
